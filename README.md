@@ -6,5 +6,7 @@ One of the use cases that don't strike people as being "graphy" per se is Busine
 
 Let's take a look at a very simple business process.
 
+![alt text](https://github.com/rossgabay/neo_bpm_blog/blob/master/bpm_sample_resized.png)
+
 + BPMN sample - bpm_sample
 + RBAC
