@@ -18,9 +18,10 @@ So now let's think about the data nomenclature involved here and what we can do 
 2. Request State
 3. Request Lifecycle Events - submitted, approved, rejected
 4. Metadata associated with Lifecycle Events - approved/rejected by/when/comments/etc
-5. Process itself! What state changes are valid for requests
-6. Actors involved in the process - request submitters and approvers
-7. Roles assigned to these Actors to indicate what they can do to requests in the certain stages of the flow
+5. Actors involved in the process - request submitters and approvers
+6. Roles assigned to these Actors to indicate what they can do to requests in the certain stages of the flow
+7. Process itself! The sequence of events, allowed state transitions, etc.
+
 
 What can we do with this data as in what kinds of questions can we answer based on it?
 Well, we can do things like:
@@ -30,9 +31,17 @@ Well, we can do things like:
 + Find all Requests submitted by a certain Requestor
 + Find out whether a specific Request can be approved/rejected/re-submitted
 + See what comments were provided when a Request was rejected
++ Check what state transition is allowed for a specific request 
++ Check whether state transition being applied to the request is allowed based on Actor's role
 + If we get ambitious - maybe an end-to-end lifecycle of a Request as it's traveling through the flow, that would be really cool
 
 there's more we can do here but this is a good starting point.
 
 Let's take a stab at building a data model based this nomenclature and see if/how we can answer these questions.
+Data model will have three major parts to it:
+1. Business Process Model elements
+2. Request - related elements
+3. Role Based Access Control elements
+
+Let's start with the Business Process Model.
 
