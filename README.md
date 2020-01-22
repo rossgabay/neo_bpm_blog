@@ -43,5 +43,21 @@ Data model will have three major parts to it:
 2. Request - related elements
 3. Role Based Access Control elements
 
-Let's start with the Business Process Model.
+Let's start with the Business Process Model. There is a couple of different ways to think about it - for example we can think about it in term of the Actions performed by Actors or we can think about it in terms of the States our Requests can travel through in the system. Let's take the State-based approach and see how things pan out.
+
+```
+create (ss:StateSubmitted)
+create (sa:StateApproved)
+create (sr:StateRejected)
+create (ss)-[:ALLOWED_TRANSITION]->(sa)
+create (sa)-[:ALLOWED_TRANSITION]->(sr)
+create (sr)-[:ALLOWED_TRANSITION]->(ss)
+return ss,sa,sr
+```
+
+
+
+
+
+
 
