@@ -55,8 +55,7 @@ create (sr)-[:ALLOWED_TRANSITION]->(ss)
 return ss,sa,sr
 ```
 
-
-
+![alt text](https://github.com/rossgabay/neo_bpm_blog/blob/master/scr_1.png)
 
 
 
