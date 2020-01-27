@@ -90,7 +90,7 @@ let's take a quick look at the profile output for that query:
 
 45 db hits. The planner is picking the `StateSubmitted` node and is expanding out of it. Then, as you can see Neo4j has to filter out nodes on the other side of the `:IN_STATE` relationship to grab the `Request` nodes from the bucket of nodes it obtained in the expansion. Since we know that there's nothing else on the other side of the `IN_STATE` rel - just Requests - if we get rid of the `:Request` label will the filter go away? Let's take a look:
 
-![alt text](https://github.com/rossgabay/neo_bpm_blog/blob/master/scr_2.png)
+![alt text](https://github.com/rossgabay/neo_bpm_blog/blob/master/scr_3.png)
 
 that worked. no filter, 35 hits vs 45. let's stick to this query for now then:
 ```
@@ -105,7 +105,7 @@ match (:StateRejected)-[:IN_STATE]->() return count(*)
 ```
 
 let's take a look at the profile:
-[TODO- scr4]
+![alt text](https://github.com/rossgabay/neo_bpm_blog/blob/master/scr_4.png)
 
 1 db hit. Not bad. Neo4J internally stores the relationship count for every node - both total count (so something like ` match (:StateRejected)-[]->() return count(*)` would also end up in 1 hit) and count per rel type. Think about how much more work RDBMS would have to do in comparison to get this count.
 
