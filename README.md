@@ -58,5 +58,86 @@ return ss,sa,sr
 ![alt text](https://github.com/rossgabay/neo_bpm_blog/blob/master/scr_1.png)
 
 
+cool. doesn't get much simpler than that. let's add some sample requests now.
+```
+unwind range(1, 10) as r
+match (ss:StateSubmitted)
+create (sr:Request)-[:IN_STATE]->(ss)
+set sr.request_id = r;
+unwind range(11, 20) as r
+match (sa:StateApproved)
+create (ra:Request)-[:IN_STATE]->(sa)
+set ra.request_id = r;
+unwind range(21, 30) as r
+match (sr:StateRejected)
+create (rr:Request)-[:IN_STATE]->(sr)
+set rr.request_id = r;
+```
+
+side note - in a "real" scenario these rquest ids will either come from the API that will e.g. be used by the end-user facing UI or someting along the lines of apoc UUIDs [TODO - link] can also be used.
+
+now that we have some sample data in our simple business flow let's look at some questions our graph can provide answers to:
+
+* show requests in a certain state. I'm an approver and I want to see all requests IDs in my bucket waiting for my action.
+doesn't get much easier than this:
+```
+match (req:Request)-[:IN_STATE]->(:StateSubmitted)
+return req.request_id
+```
+
+let's take a quick look at the profile output for that query:
+![alt text](https://github.com/rossgabay/neo_bpm_blog/blob/master/scr_2.png)
+
+45 db hits. The planner is picking the `StateSubmitted` node and is expanding out of it. Then, as you can see Neo4j has to filter out nodes on the other side of the `:IN_STATE` relationship to grab the `Request` nodes from the bucket of nodes it obtained in the expansion. Since we know that there's nothing else on the other side of the `IN_STATE` rel - just Requests - if we get rid of the `:Request` label will the filter go away? Let's take a look:
+
+![alt text](https://github.com/rossgabay/neo_bpm_blog/blob/master/scr_2.png)
+
+that worked. no filter, 35 hits vs 45. let's stick to this query for now then:
+```
+match (req)-[:IN_STATE]->(:StateSubmitted)
+return req.request_id
+```
+
+* see how many requests are currently in the rejected state. I'm a submitter and want to adjust my workload based on that figure
+
+```
+match (:StateRejected)-[:IN_STATE]->() return count(*)
+```
+
+let's take a look at the profile:
+[TODO- scr4]
+
+1 db hit. Not bad. Neo4J internally stores the relationship count for every node - both total count (so something like ` match (:StateRejected)-[]->() return count(*)` would also end up in 1 hit) and count per rel type. Think about how much more work RDBMS would have to do in comparison to get this count.
+
+* see if a given request is eligible to be moved to a certain state. For example - as an API developer working with this data I need to figure out if a certain Request can be moved to an `Approved` state. 
+
+Couple of different ways to go about this. Since we'll be using `request_id` when selecting a Request to check whether it can be moved to some other state let's create an index on it:
+```
+create index on :Request(request_id)
+```
+
+to check the eligibility of a state transition for Request with request_id=15 to be moved to a Rejected State we can do something like this:
+
+```
+match (r:Request)-[:IN_STATE]->(curr_state)-[:ALLOWED_TRANSITION]->(:StateRejected) 
+where r.request_id = 15 
+return count(*) > 0
+```
+
+... or this:
+```
+profile match (r:Request)
+where r.request_id = 15 
+return exists((r:Request)-[:IN_STATE]->()-[:ALLOWED_TRANSITION]->(:StateRejected))
+```
+
+... or this:
+```
+match (r:Request)
+where r.request_id = 15 
+return size((r:Request)-[:IN_STATE]->()-[:ALLOWED_TRANSITION]->(:StateRejected)) > 0
+```
+
+we'll also look at using a built-in `shortestPath()` to check connectivity when we'll talk about Role Based Access Control.
 
 
