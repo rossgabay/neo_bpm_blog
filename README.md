@@ -54,7 +54,7 @@ create (sr)-[:ALLOWED_TRANSITION]->(ss)
 return ss,sa,sr
 ```
 
-![alt text](https://github.com/rossgabay/neo_bpm_blog/blob/master/scr_0.png)
+![alt text](https://github.com/rossgabay/neo_bpm_blog/blob/master/scr_1.png)
 
 
 Cool. Let's add some sample requests now.
@@ -137,7 +137,7 @@ where r.request_id = 8
 return size((r:Request)-[:IN_STATE]->()-[:ALLOWED_TRANSITION]->(:StateRejected)) > 0 //true
 ```
 
-... or even this (which only uses 5 db hits to produce the result!):
+... or even this (which only uses **5 db hit**s to produce the result):
 ```
 match shortestPath((r:Request)-[*]->(:StateRejected))
 where r.request_id = 8 
