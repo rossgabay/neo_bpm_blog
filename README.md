@@ -31,7 +31,7 @@ Well, we can do things like:
 + Find all Requests submitted by a certain Requestor
 + Find out whether a specific Request can be approved/rejected/re-submitted
 + See what comments were provided when a Request was rejected
-+ Check what state transition is allowed for a specific request 
++ Check whether a specific state transition is allowed for a specific request 
 + Check whether state transition being applied to the request is allowed based on Actor's role
 
 there's more we can do here but this is a good starting point.
