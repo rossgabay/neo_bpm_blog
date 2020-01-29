@@ -57,7 +57,7 @@ return ss,sa,sr
 ![alt text](https://github.com/rossgabay/neo_bpm_blog/blob/master/scr_0.png)
 
 
-cool. let's add some sample requests now.
+Cool. Let's add some sample requests now.
 ```
 unwind range(1, 10) as r
 match (ss:StateSubmitted)
@@ -73,12 +73,12 @@ create (rr:Request)-[:IN_STATE]->(sr)
 set rr.request_id = r;
 ```
 
-side note - in a "real" scenario these rquest ids will either come from the API that will e.g. be used by the end-user facing UI or someting along the lines of apoc UUIDs [TODO - link] can also be used.
+Side note - in a "real" scenario these request IDs will either come from the API that will e.g. be used by the end-user facing UI or maybe these requests will be ingested from the external datasource so the ID will be created as a part of the ingestion/ETL flow or someting along the lines of APOC UUIDs (https://neo4j.com/docs/labs/apoc/current/graph-updates/uuid/) can also be used.
 
-now that we have some sample data in our simple business flow let's look at some questions our graph can provide answers to:
+Now that we have some sample data in our simple business flow let's look at some questions our graph can provide answers to:
 
-* show requests in a certain state. I'm an approver and I want to see all requests IDs in my bucket waiting for my action.
-doesn't get much easier than this:
+* Get all requests in a certain state. I'm an approver and I want to see all requests IDs in my bucket waiting for my action.
+Doesn't get much easier than this:
 ```
 match (req:Request)-[:IN_STATE]->(:StateSubmitted)
 return req.request_id
@@ -91,31 +91,31 @@ let's take a quick look at the profile output for that query:
 
 ![alt text](https://github.com/rossgabay/neo_bpm_blog/blob/master/scr_3.png)
 
-that worked. no filter, 36 hits vs 46. let's stick to this query for now then:
+That worked. No filter, 36 hits vs 46. Let's stick to this query for now then:
 ```
 match (req)-[:IN_STATE]->(:StateSubmitted)
 return req.request_id
 ```
 
-* see how many requests are currently in the rejected state. I'm a submitter and want to adjust my workload based on that figure
+* See how many requests are currently in the rejected state. I'm a submitter and want to adjust my workload based on that figure
 
 ```
 match ()-[:IN_STATE]->(:StateRejected) return count(*)
 ```
 
-let's take a look at the profile:
+Let's take a look at the profile:
 ![alt text](https://github.com/rossgabay/neo_bpm_blog/blob/master/scr_4.png)
 
-1 db hit. Not bad. Neo4J internally stores the relationship count for every node - both total count (so something like ` match (:StateRejected)-[]->() return count(*)` would also end up in 1 hit) and count per rel type. Think about how much more work RDBMS would have to do in comparison to get this count.
+**1 db hit**. Not bad. Neo4J internally stores the relationship count for every node - both total count (so something like ` match (:StateRejected)-[]->() return count(*)` would also end up in 1 hit) and count per rel type. Think about how much more work RDBMS would have to do in comparison to get this count.
 
-* see if a given request is eligible to be moved to a certain state. For example - as an API developer working with this data I need to figure out if a certain Request can be moved to an `Approved` state. 
+* See if a given request is eligible to be moved to a certain state. For example - as an API developer working with this data I need to figure out if a certain Request can be moved to an `Approved` state. 
 
-Couple of different ways to go about this. Since we'll be using `request_id` when selecting a Request to check whether it can be moved to some other state let's create an index on it:
+Couple of different ways to go about this. Since we'll be using `request_id` when selecting a Request to check whether it can be moved to some other state let's first create an index on it:
 ```
 create index on :Request(request_id)
 ```
 
-to check the eligibility of a state transition for Request with request_id=8 (currently in Submitted state) to be moved to a Rejected State we can do something like this:
+To check the eligibility of a state transition for Request with `request_id=8` (currently in Submitted state) to be moved to a Rejected State we can do something like this:
 
 ```
 match (r:Request)-[:IN_STATE]->()-[:ALLOWED_TRANSITION]->(:StateRejected) 
@@ -162,6 +162,12 @@ All we need to do is remove `ALLOWED_TRANSITION` relationship between `StateReje
 match (sr:StateRejected)-[r:ALLOWED_TRANSITION]->(ss:StateSubmitted) delete r
 create (sr)-[:ALLOWED_TRANSITION]->(:StateReviewRejection)-[:ALLOWED_TRANSITION]->(ss)
 ```
+Let's take a look at the updated process flow graph:
+```
+match (x)-[r:ALLOWED_TRANSITION]->(y) return x,r,y
+```
+
+![alt text](https://github.com/rossgabay/neo_bpm_blog/blob/master/scr_5.png)
 
 Now let's see if our request #21 is still eligible to become a Submitted request:
 
