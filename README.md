@@ -54,10 +54,10 @@ create (sr)-[:ALLOWED_TRANSITION]->(ss)
 return ss,sa,sr
 ```
 
-![alt text](https://github.com/rossgabay/neo_bpm_blog/blob/master/scr_1.png)
+![alt text](https://github.com/rossgabay/neo_bpm_blog/blob/master/scr_0.png)
 
 
-cool. doesn't get much simpler than that. let's add some sample requests now.
+cool. let's add some sample requests now.
 ```
 unwind range(1, 10) as r
 match (ss:StateSubmitted)
