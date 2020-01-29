@@ -50,7 +50,7 @@ create (ss:StateSubmitted)
 create (sa:StateApproved)
 create (sr:StateRejected)
 create (ss)-[:ALLOWED_TRANSITION]->(sa)
-create (sa)-[:ALLOWED_TRANSITION]->(sr)
+create (ss)-[:ALLOWED_TRANSITION]->(sr)
 create (sr)-[:ALLOWED_TRANSITION]->(ss)
 return ss,sa,sr
 ```
@@ -88,11 +88,11 @@ return req.request_id
 let's take a quick look at the profile output for that query:
 ![alt text](https://github.com/rossgabay/neo_bpm_blog/blob/master/scr_2.png)
 
-45 db hits. The planner is picking the `StateSubmitted` node and is expanding out of it. Then, as you can see Neo4j has to filter out nodes on the other side of the `:IN_STATE` relationship to grab the `Request` nodes from the bucket of nodes it obtained in the expansion. Since we know that there's nothing else on the other side of the `IN_STATE` rel - just Requests - if we get rid of the `:Request` label will the filter go away? Let's take a look:
+46 db hits. The planner is picking the `StateSubmitted` node and is expanding out of it. Then, as you can see Neo4j has to filter out nodes on the other side of the `:IN_STATE` relationship to grab the `Request` nodes from the bucket of nodes it obtained in the expansion. Since we know that there's nothing else on the other side of the `IN_STATE` rel - just Requests - if we get rid of the `:Request` label will the filter go away? Let's take a look:
 
 ![alt text](https://github.com/rossgabay/neo_bpm_blog/blob/master/scr_3.png)
 
-that worked. no filter, 35 hits vs 45. let's stick to this query for now then:
+that worked. no filter, 36 hits vs 46. let's stick to this query for now then:
 ```
 match (req)-[:IN_STATE]->(:StateSubmitted)
 return req.request_id
@@ -101,7 +101,7 @@ return req.request_id
 * see how many requests are currently in the rejected state. I'm a submitter and want to adjust my workload based on that figure
 
 ```
-match (:StateRejected)-[:IN_STATE]->() return count(*)
+match ()-[:IN_STATE]->(:StateRejected) return count(*)
 ```
 
 let's take a look at the profile:
@@ -116,28 +116,42 @@ Couple of different ways to go about this. Since we'll be using `request_id` whe
 create index on :Request(request_id)
 ```
 
-to check the eligibility of a state transition for Request with request_id=15 to be moved to a Rejected State we can do something like this:
+to check the eligibility of a state transition for Request with request_id=8 (currently in Submitted state) to be moved to a Rejected State we can do something like this:
 
 ```
 match (r:Request)-[:IN_STATE]->(curr_state)-[:ALLOWED_TRANSITION]->(:StateRejected) 
-where r.request_id = 15 
+where r.request_id = 8
 return count(*) > 0
 ```
 
 ... or this:
 ```
-profile match (r:Request)
-where r.request_id = 15 
+match (r:Request)
+where r.request_id = 8 
 return exists((r:Request)-[:IN_STATE]->()-[:ALLOWED_TRANSITION]->(:StateRejected))
 ```
 
 ... or this:
 ```
 match (r:Request)
-where r.request_id = 15 
+where r.request_id = 8 
 return size((r:Request)-[:IN_STATE]->()-[:ALLOWED_TRANSITION]->(:StateRejected)) > 0
 ```
 
-we'll also look at using a built-in `shortestPath()` to check connectivity when we'll talk about Role Based Access Control.
+... or even this (which only uses 5 db hits to produce the result!):
+```
+match shortestPath((r:Request)-[*]->(:StateRejected))
+where r.request_id = 8 
+return count(*) > 0
+```
+
+I'll leave profiling output for these queries out of this post, would highly recommend looking at it however to gain some insight into how Neo4J goes about these operations. We'll look more into using `shortestPath()` to check for connectivity between nodes in the next part of these series.
+
+Let's say our business is expanding and the process is getting more complex. For example, orders that go into the `StateRejected` bucket now have to have an additional step before they become eligible for resubmission again. 
+With non-graph representation of the flow this would be a major ordeal. But we're talking Neo4J here so it's no big deal :)
+
+```
+
+```
 
 
