@@ -31,9 +31,8 @@ Well, we can do things like:
 + Find all Requests submitted by a certain Requestor
 + Find out whether a specific Request can be approved/rejected/re-submitted
 + See what comments were provided when a Request was rejected
-+ Check what state transition is allowed for a specific request 
++ Check whether a specific state transition is allowed for a specific request 
 + Check whether state transition being applied to the request is allowed based on Actor's role
-+ If we get ambitious - maybe an end-to-end lifecycle of a Request as it's traveling through the flow, that would be really cool
 
 there's more we can do here but this is a good starting point.
 
@@ -119,39 +118,60 @@ create index on :Request(request_id)
 to check the eligibility of a state transition for Request with request_id=8 (currently in Submitted state) to be moved to a Rejected State we can do something like this:
 
 ```
-match (r:Request)-[:IN_STATE]->(curr_state)-[:ALLOWED_TRANSITION]->(:StateRejected) 
+match (r:Request)-[:IN_STATE]->()-[:ALLOWED_TRANSITION]->(:StateRejected) 
 where r.request_id = 8
-return count(*) > 0
+return count(*) > 0 //true
 ```
 
 ... or this:
 ```
 match (r:Request)
 where r.request_id = 8 
-return exists((r:Request)-[:IN_STATE]->()-[:ALLOWED_TRANSITION]->(:StateRejected))
+return exists((r:Request)-[:IN_STATE]->()-[:ALLOWED_TRANSITION]->(:StateRejected)) //true
 ```
 
 ... or this:
 ```
 match (r:Request)
 where r.request_id = 8 
-return size((r:Request)-[:IN_STATE]->()-[:ALLOWED_TRANSITION]->(:StateRejected)) > 0
+return size((r:Request)-[:IN_STATE]->()-[:ALLOWED_TRANSITION]->(:StateRejected)) > 0 //true
 ```
 
 ... or even this (which only uses 5 db hits to produce the result!):
 ```
 match shortestPath((r:Request)-[*]->(:StateRejected))
 where r.request_id = 8 
-return count(*) > 0
+return count(*) > 0 //true
+```
+
+Let's also look at one of the Rejected requests, let's say `request_id = 21` to see if it can be moved to the Submitted state:
+```
+match (r:Request)-[:IN_STATE]->()-[:ALLOWED_TRANSITION]->(:StateSubmitted) 
+where r.request_id = 21
+return count(*) > 0 //true
 ```
 
 I'll leave profiling output for these queries out of this post, would highly recommend looking at it however to gain some insight into how Neo4J goes about these operations. We'll look more into using `shortestPath()` to check for connectivity between nodes in the next part of these series.
 
-Let's say our business is expanding and the process is getting more complex. For example, orders that go into the `StateRejected` bucket now have to have an additional step before they become eligible for resubmission again. 
+Let's say our business is expanding and the process is getting more complex. For example, orders that go into the `StateRejected` bucket now have to have an additional Review step before they become eligible for resubmission again. 
 With non-graph representation of the flow this would be a major ordeal. But we're talking Neo4J here so it's no big deal :)
 
-```
+All we need to do is remove `ALLOWED_TRANSITION` relationship between `StateRejected` and `StateSubmitted` nodes and introduce new `StateReviewRejection` state node between `StateRejected` and `StateSubmitted` nodes:
 
 ```
+match (sr:StateRejected)-[r:ALLOWED_TRANSITION]->(ss:StateSubmitted) delete r
+create (sr)-[:ALLOWED_TRANSITION]->(:StateReviewRejection)-[:ALLOWED_TRANSITION]->(ss)
+```
+
+Now let's see if our request #21 is still eligible to become a Submitted request:
+
+```
+match (r:Request)-[:IN_STATE]->()-[:ALLOWED_TRANSITION]->(:StateSubmitted) 
+where r.request_id = 21
+return count(*) > 0 //false! now it has to go through the StateReviewRejection node
+```
+
+This wraps up part 1. In the next part we'll look at super-imposing Users and Roles on our graph and using them to derive Role Based Access Control decisions.
+
 
 
